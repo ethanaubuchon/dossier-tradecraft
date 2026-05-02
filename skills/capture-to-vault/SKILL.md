@@ -57,9 +57,9 @@ Draft a note and write it. Surface the slug and any non-obvious placement decisi
    - If new tags emerge from the new content, merge them into existing `tags` (no duplicates). Do not replace.
    - Merge any new entries in `related` with existing ones (no duplicates). Do not replace.
    - Compose the new full body — integrate the input `body` into the doc as the caller intends. The caller is responsible for handing you a body that represents the desired new state.
-   - If `citations` present: integrate into the existing `## Sources` section if there is one, or add one.
+   - If `citations` present: integrate into the existing `## Sources` section if there is one, or add one. Use the same `(title — URL — accessed date)` format as create mode.
 
-3. **Write the note.** Call `mcp__dossier-mcp__update_note` with the updated content. Pass `slug`, `title`, `tags`, `related`, and `content` per the tool's required parameters.
+3. **Write the note.** Call `mcp__dossier-mcp__update_note` with the updated content. Pass `slug`, `content`, and all preserved frontmatter fields (`title`, `date`, `updated`, `tags`, `related`, plus any recipe-specific fields like `status`) per the tool's required parameters.
 
 4. **Backlink any new related slugs.** For each slug newly added to `related` (not previously present), call `mcp__dossier-mcp__update_note` on that target note to add this note's slug to its `related` field. Skip already-linked targets.
 
