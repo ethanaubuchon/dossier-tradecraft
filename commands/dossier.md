@@ -4,7 +4,7 @@ description: Force load of Dossier vault profile (and inbox check) before proces
 
 You are starting a session that needs Dossier vault context. The user's task (if any): $ARGUMENTS
 
-This is the `/dossier` recipe — a thin enforcement command. Its only job is to ensure the profile-load step runs before any other action. See `projects/workflows/design` in the vault for the broader workflow architecture.
+This is the `/dossier` recipe of the dossier-tradecraft framework — a thin enforcement command. Its only job is to ensure the profile-load step runs before any other action.
 
 ## Workflow
 

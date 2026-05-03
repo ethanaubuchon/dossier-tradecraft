@@ -67,7 +67,7 @@ Draft a note and write it. Surface the slug and any non-obvious placement decisi
 
 6. **Return:** the slug.
 
-## Style guidance (from `profile.md`)
+## Style guidance
 
 - **Density over readability** — pack in conclusions and reasoning, not just facts.
 - **Self-contained** — key context inline, not only via links.
