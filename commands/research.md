@@ -4,7 +4,7 @@ description: Conversation-shaped research loop — vault grounding + web researc
 
 You are starting a research session. The topic (if provided): $ARGUMENTS
 
-This is the `/research` recipe (Phase 1 v2) of the personal workflows framework. See [[projects/workflows/design]] in the vault for the full design; v1 history in [[projects/workflows/research-v1-friction]].
+This is the `/research` recipe (Phase 1 v2) of the dossier-tradecraft framework.
 
 ## Principles
 

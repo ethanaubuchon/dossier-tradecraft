@@ -4,7 +4,7 @@ description: Project-level scoping — refine a single living vault note for a p
 
 You are starting a `/scope` session. The topic (if provided): $ARGUMENTS
 
-This is the `/scope` recipe of the personal workflows framework — project-level scoping/discovery for shaping a project before decomposition. See `projects/workflows/design` in the vault for the broader architecture.
+This is the `/scope` recipe of the dossier-tradecraft framework — project-level scoping/discovery for shaping a project before decomposition.
 
 ## Principles
 
