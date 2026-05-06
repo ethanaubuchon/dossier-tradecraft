@@ -17,7 +17,7 @@ This is the `/scope` recipe of the dossier-tradecraft framework — project-leve
 
 ## Workflow
 
-1. **Load context.** Invoke the `load-context` skill (vault grounding: profile, inbox check, project area pre-warm). If the working directory is inside a git repo, also note the cwd, current branch, and whether a CLAUDE.md is present, as additional context for the session — no separate primitive needed.
+1. **Load context.** Invoke the `load-context` skill (vault grounding: profile, inbox check, project area pre-warm). If the working directory is inside a git repo, also note the cwd, current branch, and whether a CLAUDE.md is present, as additional context for the session — no separate primitive needed. Also search for an upstream design doc (`tag:design` + topic) using `mcp__dossier-mcp__search_notes`. If one exists, load it and note its status; if status is not `ready-for-scope`, surface a warning before proceeding — the user may want to revise the design first.
 
 2. **Resolve scope doc.** Search the vault for an existing scope doc on this topic.
    - Use `mcp__dossier-mcp__search_notes` with the topic terms; filter for `tag:scope` if the search supports it, otherwise check the `tags` field on each candidate.
@@ -33,7 +33,7 @@ This is the `/scope` recipe of the dossier-tradecraft framework — project-leve
 
    b. **Optional research.** If the user mentions areas to look up, or if the topic clearly needs grounding from outside the user's input, invoke `dispatch-exploration` with appropriate vault and/or web queries. Otherwise skip.
 
-   c. **Decide structure.** The body MUST include an `## Unknowns` section with markdown checkboxes (`- [ ]`). Other sections — Intent, Context, Scope, Decisions, Risks, etc. — are your call per the topic. Pick what fits; don't manufacture sections beyond what the topic genuinely needs.
+   c. **Decide structure.** The body MUST include an `## Unknowns` section with markdown checkboxes (`- [ ]`). If Step 1 loaded an upstream design doc, derive the initial Unknowns from its `## Open considerations` and any open items in `## Decisions log` — these are typically the implementation-specifics the design intentionally deferred. Other sections — Intent, Context, Scope, Decisions, Risks, etc. — are your call per the topic. Pick what fits; don't manufacture sections beyond what the topic genuinely needs.
 
    d. **Decide placement.** Default pattern: `projects/<slug>/scope.md` co-located with the project area. You may override based on existing vault structure (e.g., if there's already a `projects/<slug>/` area, use it; if not, create one). The `scope` tag makes location-independent re-entry work, so don't agonize over the path.
 
@@ -86,3 +86,4 @@ This is the `/scope` recipe of the dossier-tradecraft framework — project-leve
 - Re-entry uses tag + topic search. Don't rely on hardcoded paths.
 - If the user pivots topic mid-session (starts shaping something genuinely different), surface that the loaded doc may not be the right home before continuing — they may want a new doc.
 - The `## Unknowns` section is the only required structural element. Everything else is your judgment.
+- **Kickback awareness.** Watch for upstream-design and research side-jump cues. If during refinement a question feels like it belongs in `/design` (the original design choice was wrong) or `/research` (we need information we don't have), surface conversationally and ask about context-switching. Doc state stays as-is during kickback; on re-entry, Step 1 re-checks upstream design status.
