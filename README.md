@@ -1,6 +1,6 @@
 # dossier-tradecraft
 
-Slash commands and skills for [Claude Code](https://claude.ai/code) that extend [dossier-mcp](https://github.com/ethanaubuchon/dossier-mcp) with opinionated workflows for research, project scoping, and vault context loading.
+Slash commands and skills for [Claude Code](https://claude.ai/code) that extend [dossier-mcp](https://github.com/ethanaubuchon/dossier-mcp) with opinionated workflows for research, design, project scoping, and vault context loading.
 
 These workflows are an explicit add-on to dossier-mcp — they assume a Dossier-style vault and call dossier-mcp's tools throughout. Without that setup, nothing here works as a standalone tool.
 
@@ -28,10 +28,13 @@ The installer symlinks `commands/`, `skills/`, and `agents/` into `~/.claude/`. 
 | Command | What it does |
 |---|---|
 | `/research [topic]` | Conversation-shaped research loop. Vault grounding → web research → agent-judged capture into the vault with citations. |
-| `/scope [topic]` | Project-level scoping. Refines a single living scope doc per project; re-entrant; required `## Unknowns` section. |
+| `/design [topic]` | Early-stage design exploration. Conversation-shaped dialog over a single living design note; required `## Approach` section; re-entrant for refinement. Sits between `/research` and `/scope`. |
+| `/scope [topic]` | Project-level scoping. Refines a single living scope doc per project; re-entrant; required `## Unknowns` section. Loads upstream design doc (if any exists) for context. |
 | `/dossier [task]` | Thin auxiliary command that forces vault profile loading before any other action. Solves the failure mode where multi-part prompts cause Claude to skip profile-load. |
 
 Each command's full behavior is documented in the corresponding file under `commands/`.
+
+The phase recipes (`/design`, `/scope`, and the planned `/decompose` / `/implement`) share a cross-recipe **kickback** convention: downstream work that surfaces an upstream concern (or an information gap) prompts the agent to ask whether to context-switch back. Phases aren't strictly one-way.
 
 ## Roadmap
 
