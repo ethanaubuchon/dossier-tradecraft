@@ -23,4 +23,3 @@ No structured return value. Context loads into the conversation. The recipe cont
 
 - Repo / vault / mixed environment detection
 - `git status` snapshot for the working dir
-- Repo-local `CLAUDE.md` load

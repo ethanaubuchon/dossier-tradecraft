@@ -11,14 +11,14 @@ This is the `/decompose` recipe of the dossier-tradecraft framework — Phase 3,
 - **Tracker is canonical; vault is breadcrumb.** Tasks live in the issue tracker. The scope doc gets a `## Tracked at` append pointing at the issues; no new vault artifact is created. Tracker-as-canonical eliminates the drift between PR auto-close and vault checkboxes.
 - **Two-track behavior.** Fast-track for 1–2 issues (small bug fix, single feature). Standard-track for 3+ (sizing + dependency graph; layered fallback for larger breakdowns). Same recipe, different ceremony.
 - **The graph is the value.** Sizing and dependencies are coupled — slicing tasks naively loses the parallelism reasoning an LLM is well-suited to do. Don't enumerate; graph.
-- **Project-adaptive shape.** Tracker preferences are read from auto-loaded repo CLAUDE.md (or other project context) as prose — no schema. Vault fallback when no tracker is configured.
+- **Project-adaptive shape.** Tracker preferences are read from the project's agent-instruction file (CLAUDE.md, AGENTS.md, etc.) (or other project context) as prose — no schema. Vault fallback when no tracker is configured.
 - **Cross-team artifact self-containment.** Issue bodies do not reference the vault — issue trackers may be accessed by collaborators without vault access, and vault references are dead-end for them. Vault → tracker links exist one-way only, on the vault side.
 - **Agent-judged writes.** Decide sizing call, structure, and prose directly; surface what was done. The only explicit confirmation gate is the fast-track sizing check.
 - **Loop exits on natural signal.** No 3-option decision matrix at every cycle.
 
 ## Workflow
 
-1. **Load context.** Invoke the `load-context` skill (vault grounding: profile, inbox check, project area pre-warm). If the working directory is inside a git repo, also note the cwd, current branch, and whether a CLAUDE.md is present, as additional context for the session.
+1. **Load context.** Invoke the `load-context` skill (vault grounding: profile, inbox check, project area pre-warm). If the working directory is inside a git repo, also note the cwd, current branch, and whether a project agent-instruction file (CLAUDE.md, AGENTS.md, etc.) is present, as additional context for the session.
 
 2. **Resolve scope doc.** Search the vault for the scope doc this session is decomposing.
    - Use `mcp__dossier-mcp__search_notes` with the topic terms; filter for `tag:scope` if the search supports it, otherwise check the `tags` field on each candidate.
@@ -30,9 +30,9 @@ This is the `/decompose` recipe of the dossier-tradecraft framework — Phase 3,
    - **>1 match** → list candidates briefly (slug + title + status) and ask which to continue with.
    - **0 matches** → surface "no scope doc found for this topic — `/decompose` consumes scope docs; want to start with `/scope` first?" Don't proceed without one.
 
-3. **Resolve tracker config.** Read tracker hints from auto-loaded session context (CLAUDE.md auto-loads in repo sessions; the vault profile and project notes loaded in Step 1 may also pin a tracker). Look for tracker name + shape preferences in prose form (e.g., "issues in GitHub, flat with labels for grouping").
+3. **Resolve tracker config.** Read tracker hints from auto-loaded session context (the project's agent-instruction file auto-loads in repo sessions; the vault profile and project notes loaded in Step 1 may also pin a tracker). Look for tracker name + shape preferences in prose form (e.g., "issues in GitHub, flat with labels for grouping").
    - **Found** → use the configured tracker and shape.
-   - **Missing** → surface: *"No issue tracker config in context — which tracker (GitHub / Shortcut / Jira) or vault fallback? I can write your choice to CLAUDE.md if you want it persistent."* User picks; persistence is opt-in per-prompt; do not silently edit CLAUDE.md.
+   - **Missing** → surface: *"No issue tracker config in context — which tracker (GitHub / Shortcut / Jira) or vault fallback? I can write your choice to your project's agent-instruction file (`AGENTS.md` or `CLAUDE.md`, whichever exists; defaults to `AGENTS.md` if creating new) if you want it persistent."* User picks; persistence is opt-in per-prompt; do not silently edit the agent-instruction file.
    - v1 implements **GitHub** (via the `gh` CLI) and **vault fallback**. If the user picks Shortcut or Jira, surface the limitation and offer vault fallback for the session.
 
 4. **Sizing call (fast-track vs standard-track).** Read the scope doc's Decisions, Intent, and structural sections. Estimate distinct concerns: 1–2 → fast-track; 3+ → standard-track. Use scope-doc complexity and distinct-concern count as priors; don't apply a brittle threshold.
@@ -75,7 +75,7 @@ This is the `/decompose` recipe of the dossier-tradecraft framework — Phase 3,
    - **Description** — 1–3 sentence prose paragraph stating what the task is and why it exists.
    - **Acceptance criteria** — markdown checklist (`- [ ]`) of concrete done conditions.
    - **Cross-issue links** — inline plaintext `Blocks: #N`, `Blocked by: #N`, `Related: #N` where applicable. GitHub auto-creates back-references when issue numbers appear in bodies — no special API needed.
-   - **Per-tracker required fields** — per repo CLAUDE.md (e.g., `--label` flags for GitHub).
+   - **Per-tracker required fields** — per the project's agent-instruction file (e.g., `--label` flags for GitHub).
 
    **Do not include vault backlinks in issue bodies.** Issue trackers may be accessed by collaborators without vault access; vault references are dead-end for them. Vault → tracker links live only on the vault side, in `## Tracked at`.
 
@@ -83,7 +83,7 @@ This is the `/decompose` recipe of the dossier-tradecraft framework — Phase 3,
 
    ### GitHub mode
 
-   For each issue: invoke `gh issue create --title "..." --body "..."` (with `--label` and any other per-tracker fields per CLAUDE.md). Capture the returned issue URL/number. Cross-issue links use plaintext `#N` references in bodies; write parents first so children can reference their numbers.
+   For each issue: invoke `gh issue create --title "..." --body "..."` (with `--label` and any other per-tracker fields per the project's agent-instruction file). Capture the returned issue URL/number. Cross-issue links use plaintext `#N` references in bodies; write parents first so children can reference their numbers.
 
    On mid-write failure: stop, surface the error and the partial state (issues already written), and **stay at `ready-for-decompose`**. Do not flip status — the status is meaningful only when the breakdown is complete.
 
@@ -117,7 +117,7 @@ When the resolved scope doc is already `tracked`:
 a. Read the scope doc's `## Tracked at` (GitHub mode) or `## Tasks` (vault fallback) to enumerate the breakdown.
 
 b. **Pull live status.**
-   - **GitHub mode:** call `gh issue list` filtered by the labels referenced in CLAUDE.md, or by the issue numbers from `## Tracked at`. Surface a concise summary, e.g. *"5 of 7 issues closed."*
+   - **GitHub mode:** call `gh issue list` filtered by the labels referenced in the project's agent-instruction file, or by the issue numbers from `## Tracked at`. Surface a concise summary, e.g. *"5 of 7 issues closed."*
    - **Vault fallback mode:** read the `## Tasks` checkbox state from the doc and summarize.
 
 c. **If all closed/done** → surface *"all tracked issues are closed — archive scope?"* On user confirmation, flip `status:` to `archived` via `capture-to-vault` in `mode: update`.

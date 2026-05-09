@@ -17,7 +17,7 @@ This is the `/scope` recipe of the dossier-tradecraft framework — project-leve
 
 ## Workflow
 
-1. **Load context.** Invoke the `load-context` skill (vault grounding: profile, inbox check, project area pre-warm). If the working directory is inside a git repo, also note the cwd, current branch, and whether a CLAUDE.md is present, as additional context for the session — no separate primitive needed. Also search for an upstream design doc (`tag:design` + topic) using `mcp__dossier-mcp__search_notes`. If one exists, load it and note its status; if status is not `ready-for-scope`, surface a warning before proceeding — the user may want to revise the design first.
+1. **Load context.** Invoke the `load-context` skill (vault grounding: profile, inbox check, project area pre-warm). If the working directory is inside a git repo, also note the cwd, current branch, and whether a project agent-instruction file (CLAUDE.md, AGENTS.md, etc.) is present, as additional context for the session — no separate primitive needed. Also search for an upstream design doc (`tag:design` + topic) using `mcp__dossier-mcp__search_notes`. If one exists, load it and note its status; if status is not `ready-for-scope`, surface a warning before proceeding — the user may want to revise the design first.
 
 2. **Resolve scope doc.** Search the vault for an existing scope doc on this topic.
    - Use `mcp__dossier-mcp__search_notes` with the topic terms; filter for `tag:scope` if the search supports it, otherwise check the `tags` field on each candidate.
