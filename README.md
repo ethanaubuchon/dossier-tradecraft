@@ -30,17 +30,17 @@ The installer symlinks `commands/`, `skills/`, and `agents/` into `~/.claude/`. 
 | `/research [topic]` | Conversation-shaped research loop. Vault grounding → web research → agent-judged capture into the vault with citations. |
 | `/design [topic]` | Early-stage design exploration. Conversation-shaped dialog over a single living design note; required `## Approach` section; re-entrant for refinement. Sits between `/research` and `/scope`. |
 | `/scope [topic]` | Project-level scoping. Refines a single living scope doc per project; re-entrant; required `## Unknowns` section. Loads upstream design doc (if any exists) for context. |
+| `/decompose [topic]` | Feature/story breakdown. Consumes a `ready-for-decompose` scope doc and produces a task graph in the project's issue tracker (GitHub via `gh`, with vault fallback). Tracker is canonical; scope doc gets a `## Tracked at` breadcrumb. |
 | `/dossier [task]` | Thin auxiliary command that forces vault profile loading before any other action. Solves the failure mode where multi-part prompts cause Claude to skip profile-load. |
 
 Each command's full behavior is documented in the corresponding file under `commands/`.
 
-The phase recipes (`/design`, `/scope`, and the planned `/decompose` / `/implement`) share a cross-recipe **kickback** convention: downstream work that surfaces an upstream concern (or an information gap) prompts the agent to ask whether to context-switch back. Phases aren't strictly one-way.
+The phase recipes (`/design`, `/scope`, `/decompose`, and the planned `/implement`) share a cross-recipe **kickback** convention: downstream work that surfaces an upstream concern (or an information gap) prompts the agent to ask whether to context-switch back. Phases aren't strictly one-way. `/decompose` further refines this — research is handled inline rather than as a kickback, since research produces information rather than owned decisions.
 
 ## Roadmap
 
 Planned but not shipped — see the [Issues tab](https://github.com/ethanaubuchon/dossier-tradecraft/issues) for state and discussion:
 
-- **`/decompose`** — feature/story breakdown. Consumes scope docs marked `ready-for-decompose` and produces task lists in GitHub issues, repo plan files, or vault notes.
 - **`/implement`** — feature implementation in a repo or vault. Wraps repo lifecycle (branch, worktree, PR) and review automation.
 - **Plugin packaging** — repackage as a proper Claude Code plugin once the workflows have weeks of real use.
 
