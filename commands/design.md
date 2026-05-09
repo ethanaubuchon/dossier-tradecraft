@@ -18,7 +18,7 @@ This is the `/design` recipe of the dossier-tradecraft framework — early-stage
 
 ## Workflow
 
-1. **Load context.** Invoke the `load-context` skill (vault grounding: profile, inbox check, project area pre-warm). If the working directory is inside a git repo, also note the cwd, current branch, and whether a CLAUDE.md is present.
+1. **Load context.** Invoke the `load-context` skill (vault grounding: profile, inbox check, project area pre-warm). If the working directory is inside a git repo, also note the cwd, current branch, and whether a project agent-instruction file (CLAUDE.md, AGENTS.md, etc.) is present.
 
 2. **Resolve design doc.** Search the vault for an existing design note on this topic.
    - Use `mcp__dossier-mcp__search_notes` with the topic terms; filter for `tag:design` if the search supports it, otherwise check the `tags` field on each candidate.
