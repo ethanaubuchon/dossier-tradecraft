@@ -13,7 +13,7 @@ This is the `/design` recipe of the dossier-tradecraft framework — early-stage
 - **Required structural element: an `## Approach` section.** Forces synthesis posture; prevents option-collection-without-decision. Other sections are agent-driven per topic.
 - **Holistic refinement, not Unknowns walk.** Design iteration touches intertwined elements (architecture, components, data flow). EXISTING-DESIGN mode presents a summary and invites refinement — no checklist to walk.
 - **Agent-judged writes.** Decide slug, structure, and edits directly; surface what was done so the user can redirect post-hoc. No propose-then-approve gates.
-- **Inline integration.** Findings during the session land in the design note itself. Substantive web research that warrants standalone capture goes through `/research` (see Step 4.c).
+- **Inline integration.** Findings during the session land in the design note itself, including those from inline research methodology (see Step 4.c). Research is methodology used inside this recipe, not a separate destination — there's no standalone research-note kickback.
 - **Loop exits on natural signal.** No 3-option decision matrix at every cycle.
 
 ## Workflow
@@ -32,7 +32,7 @@ This is the `/design` recipe of the dossier-tradecraft framework — early-stage
 
    a. If `$ARGUMENTS` was empty, ask the user to describe the problem briefly (1–3 sentences). Otherwise treat the topic as initial framing and confirm if anything is unclear.
 
-   b. **Optional vault grounding.** If the topic clearly needs grounding from existing vault context, invoke `dispatch-exploration` with appropriate vault queries. Otherwise skip. For substantive web research, see Step 4.c (research side-jump) — don't absorb `/research` into `/design`.
+   b. **Optional vault grounding.** If the topic clearly needs grounding from existing vault context, invoke `dispatch-exploration` with appropriate vault queries. Otherwise skip. For substantive web research, use inline research methodology (Step 4.c) — don't kick back to `/research`.
 
    c. **Conversational design dialog.** Ask clarifying questions one at a time, multi-choice when possible. Propose 2–3 approaches with tradeoffs; lead with your recommendation and reasoning. Iterate until the user converges on a consolidated design. The dialog is the work — don't seek synthesis prematurely.
 
@@ -77,9 +77,9 @@ This is the `/design` recipe of the dossier-tradecraft framework — early-stage
 
    b. **Inline lookup if needed.** If a quick or factual lookup is required, invoke `dispatch-exploration` with `target: vault` (or `web` for fast factual checks). Keep these tight — they're grounding, not standalone research.
 
-   c. **Surface research side-jump if substantive.** If a question surfaces that needs deeper research (landscape scan, multi-source comparison, exploratory), surface conversationally: *"this looks like `/research` territory; should we step out and come back?"* User decides. After `/research` returns, re-invoke `/design` with the new context as refinement input.
+   c. **Inline research when substantive.** When a question surfaces that needs deeper research — landscape scan, multi-source comparison, exploratory dive — invoke `dispatch-exploration` directly with web (and vault if grounding helps) queries. Research is methodology used inline here, not a kickback to `/research`: the cross-verify consent gate is inherited automatically from `dispatch-exploration` (cohort discipline, marketplace-listings consent, low retail-sample escalation), findings stay as inputs to *this* design — no separate research note — and the design doc absorbs the substance into the relevant section(s) per Step 4.e. Surface the research conversationally so the user can redirect — *"this needs a deeper look — running a few web queries on X"* — but don't pause for a side-jump.
 
-   d. **Surface upstream kickback if it arises.** Rare for `/design` — research is the only upstream phase, and a kickback to research is structurally a side-jump (4.c). If user direction reveals the framing was wrong, the recipe is already re-entrant; refinement absorbs it.
+   d. **No upstream kickback to manage.** `/design` has no upstream phase — research is methodology used inline (4.c), not a separate phase to kick back to. If user direction reveals the framing was wrong, the recipe is already re-entrant; refinement absorbs it.
 
    e. **Integrate inline.** Update the relevant section(s) of the doc. Don't create separate vault notes for findings — they land in the design note.
 
@@ -102,4 +102,4 @@ This is the `/design` recipe of the dossier-tradecraft framework — early-stage
 - Re-entry uses tag + topic search. Don't rely on hardcoded paths.
 - If the user pivots topic mid-session, surface that the loaded doc may not be the right home before continuing — they may want a new doc.
 - The `## Approach` section is the only required structural element. Everything else is your judgment.
-- **Kickback awareness.** Watch for research side-jump cues (Step 4.c). `/design` is more often the *target* of kickback from `/scope` downstream — receive that context and integrate it as refinement input. Doc state stays as-is during a downstream kickback; the recipe doesn't need to do anything special on re-entry beyond the standard load-context refresh.
+- **Kickback awareness.** `/design` has no upstream phase to kick back to — research lives inside the recipe (Step 4.c). It is more often the *target* of kickback from `/scope` downstream — receive that context and integrate it as refinement input. Doc state stays as-is during a downstream kickback; the recipe doesn't need to do anything special on re-entry beyond the standard load-context refresh.
