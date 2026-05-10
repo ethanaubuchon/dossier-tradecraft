@@ -51,6 +51,8 @@ Every cited source carries one general cohort tag. Pricing sources additionally 
 
 A project-specific override (e.g. a non-US allowlist) ships as a project-skill override of this file. Don't infer or invent a different allowlist mid-session.
 
+**`type_tags` describe what a source IS, not what it discusses.** A journalist's article reporting on marketplace prices is `mainstream-news` (or `independent-review`), NOT `marketplace-*`. The pricing subtypes apply only to sources that are themselves the price source — a manufacturer page selling the product, an Amazon-direct listing, an eBay BIN. News coverage of pricing is news; tag it by its general cohort.
+
 ## Process
 
 Follow these steps in order. Cohort discipline is the structural defense against single-source bias and source-cohort homogeneity — do not skip steps because results "look good" after step 1.
@@ -101,15 +103,25 @@ citations:
   - ...
 ```
 
-For pricing mode, replace `summary` with the tiered structure described above (or blend it into the summary if a single tier is appropriate; tier the output when both `new` and `used` are present).
+For pricing mode, replace `summary` with the tiered structure described above. Use the prefixed-key shape — one line per tier, each line in the `<tier>: median $Y, range $A–$B (N sources, <subtype mix>)` format:
+
+```
+new:         median $Y, range $A–$B (N sources, manufacturer-direct + major-retailer)
+used:        median $Z, range $C–$D (M sources, marketplace-used / refurbished / etc.)
+refurbished: median $W, range $E–$F (K sources, manufacturer-direct refurb)
+```
+
+**Do not collapse pricing tiers into markdown headers and bullets** — that breaks downstream parsers (`dispatch-exploration`, `capture-to-vault`). Supplemental commentary (context, caveats, time-sensitivity notes) belongs in a short `summary:` narrative line above the tiers, or as a `caveat:` field below `flags:`. Single-tier pricing returns a single line under `summary:` — no need to invent a `new:` key for a one-tier result.
 
 `flags` is a list (omit the field or set to `[]` if none apply). The vocabulary:
 
 - `single-source` — only one usable source for the central claim or price
-- `cohort-gap: <slot>` — one entry per unfilled slot (e.g. `cohort-gap: critical-adversarial`); never widen the dominant cohort to fill — surface the gap
+- `cohort-gap: <slot>` — one entry per unfilled slot **that is meaningful for the topic** (e.g. `cohort-gap: critical-adversarial` for product research; `cohort-gap: major-retailer` for pricing). Categorical mismatches (e.g. `peer-reviewed-study` for consumer electronics, `industry-analyst` for hobbyist software) belong in `cohort_spread` description text, not as flags. When in doubt, emit the flag — false positives here are cheaper than false negatives. Never widen the dominant cohort to fill — surface the gap.
 - `pricing-mode` — pricing mode is active
 - `marketplace-listings-detected` — used / auction / refurbished / private-listing sources present in the candidate set while reputable sample is thin
 - `cohort-homogeneity: <pattern>` — multiple sources within a cohort share suspicious traits (near-identical phrasing, citation cycles to the same primary, all on `recent-domain`s)
+
+**Flag values use only the strict tokens above.** Clarifying detail belongs in `cohort_spread` or `summary`, not embedded in the flag value. Format: `flags: [single-source, cohort-gap: critical-adversarial, pricing-mode]` (allowed); `flags: [single-source for X reason (additional context)]` (not allowed — put the reason in `summary` or `cohort_spread`).
 
 `cohort_spread` is a human-readable single line, not a structured object. Example: `1× vendor, 2× independent-review, 1× community-forum, 0× critical-adversarial — gap: critical slot empty after targeted query`.
 
@@ -119,6 +131,8 @@ If the web yields nothing usable:
 query: <original query>
 summary: none
 ```
+
+**Output formatting discipline.** The `citations:` YAML list is the only source listing. Do not append a separate markdown `Sources` section after the YAML output — that's redundant duplication that breaks downstream parsers (`dispatch-exploration`, `capture-to-vault`). Likewise: do not wrap the output in markdown code fences, do not add markdown headers like `**summary:**` — emit the YAML-shaped fields as written in the schema.
 
 ## Skepticism calibration
 
@@ -133,4 +147,5 @@ summary: none
 - **No editorializing** beyond the summary. The parent recipe does synthesis and discussion; you supply the cohort-disciplined sample plus tags.
 - **Cite everything.** Every substantive claim in the summary should be traceable to a cited source.
 - **Single pass.** The parent dispatches multiple instances in parallel for breadth; don't go recursive.
+- **No clarification requests.** Apply cohort discipline to the query as given — even if it's broad, ambiguous, or politically sensitive. If the query is genuinely too broad to produce a useful sample, return `summary: none` with relevant `cohort-gap:` flags and a one-line note in `cohort_spread` describing the breadth. Asking the user to narrow is the parent recipe's job, not yours; you have one shot to apply discipline.
 - **Never silently widen.** When the reputable sample is thin, surface the flag — don't fill the gap with lower-cohort sources to make the output look complete.
