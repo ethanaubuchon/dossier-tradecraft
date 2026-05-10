@@ -13,6 +13,7 @@ This is the `/research` recipe (Phase 1 v2) of the dossier-tradecraft framework.
 - **Frame step is near-zero.** Topic-as-stated passes through. Clarifications are conditional, not mandatory.
 - **Capture is agent-judged; write directly.** You pick the slug, draft the note with citations, and write it. Surface what was captured afterward — the user can redirect, revise, or ask you to move/edit the note post-hoc. Anchor is a capture-time output, not a frame-time input.
 - **Loop iteration is context-accretive.** Each turn builds on previous turn's captures.
+- **Thin caller.** Cross-verify mechanics — cohort discipline, source-type annotations, used / marketplace consent gates, low retail-sample escalation — live in `agents/web-researcher.md` and `skills/dispatch-exploration/SKILL.md`. This recipe never re-implements them. Recipe-specific responsibilities are intake, loop shape, and capture; everything else is delegated.
 
 ## Workflow
 
@@ -40,11 +41,11 @@ This is the `/research` recipe (Phase 1 v2) of the dossier-tradecraft framework.
 
    a. **Web research.** Invoke `dispatch-exploration` with 1–3 web queries (`target: web`) informed by grounding and any discussion so far.
 
-   b. **Present findings.** Summarize what came back, with citations inline.
+   b. **Present findings.** Summarize what came back, with citations inline. For each web finding, surface the cohort spread (e.g. `cohort: 1× vendor, 2× independent-review, 0× critical-adversarial`) and any flags emitted by `web-researcher` (`single-source`, `cohort-gap: <slot>`, `pricing-mode`, `marketplace-listings-detected`, `cohort-homogeneity: <pattern>`, `consent-declined-marketplace`, `low-sample`). Don't strip them — visible source-cohort discipline is the deliverable, not just the summary text. Pricing findings render as tiered new vs used when the consent gate produced both; otherwise as a single `new:` block with source count and reputable-source qualifier.
 
    c. **Discuss.** Always interactive and conversational. Talk through what matters, what's surprising, what to dig into. No decision matrices.
 
-   d. **Capture.** Invoke `capture-to-vault`. Draft the note — destination slug, frontmatter, body, citations — and write it directly. Surface the slug and any non-obvious placement decisions afterward; the user can redirect or revise post-hoc.
+   d. **Capture.** Invoke `capture-to-vault`. Draft the note — destination slug, frontmatter, body, citations — and write it directly. When the underlying findings carried `cohort-gap`, `single-source`, `low-sample`, `cohort-homogeneity`, or `consent-declined-marketplace` flags, fold them into the body as caveats (e.g. a brief "Caveats" line or sentence inline with the relevant claim) so the captured note inherits the same epistemic posture as the live finding. Pass citations through with their `type_tags` preserved. Don't massage the findings shape away at the recipe layer — flag-derived caveats are the captured form of the agent's flag list. Surface the slug and any non-obvious placement decisions afterward; the user can redirect or revise post-hoc.
 
    e. **Loop check.** Ask the user: go deeper (refine topic, feed more context), pivot to a related thread that builds on what we've learned, or exit?
       - Deeper / pivot → back to (a). Optionally re-run step 4 (grounding) if the new thread pulls in vault areas we haven't touched.
