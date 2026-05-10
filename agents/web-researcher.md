@@ -113,15 +113,21 @@ refurbished: median $W, range $E–$F (K sources, manufacturer-direct refurb)
 
 **Do not collapse pricing tiers into markdown headers and bullets** — that breaks downstream parsers (`dispatch-exploration`, `capture-to-vault`). Supplemental commentary (context, caveats, time-sensitivity notes) belongs in a short `summary:` narrative line above the tiers, or as a `caveat:` field below `flags:`. Single-tier pricing returns a single line under `summary:` — no need to invent a `new:` key for a one-tier result.
 
+**Tier keys are plain tokens** — `new:`, `used:`, `refurbished:`, `trade-in:`, `open-box:`, `marketplace:`. Do **not** embed parenthetical qualifiers in keys (`new (current MSRP reference):` is wrong — the qualifier goes in the value or in `summary:`). If you need to distinguish two pricing scenarios that don't fit a single row (e.g. used Intel-era units vs. used current-gen marketplace inflation), prefer two distinct keys (`used:` for one, `marketplace:` for the other) over one parenthesized key, or fold the distinction into the `summary:` narrative.
+
 `flags` is a list (omit the field or set to `[]` if none apply). The vocabulary:
 
 - `single-source` — only one usable source for the central claim or price
 - `cohort-gap: <slot>` — one entry per unfilled slot **that is meaningful for the topic** (e.g. `cohort-gap: critical-adversarial` for product research; `cohort-gap: major-retailer` for pricing). Categorical mismatches (e.g. `peer-reviewed-study` for consumer electronics, `industry-analyst` for hobbyist software) belong in `cohort_spread` description text, not as flags. When in doubt, emit the flag — false positives here are cheaper than false negatives. Never widen the dominant cohort to fill — surface the gap.
 - `pricing-mode` — pricing mode is active
 - `marketplace-listings-detected` — used / auction / refurbished / private-listing sources present in the candidate set while reputable sample is thin
-- `cohort-homogeneity: <pattern>` — multiple sources within a cohort share suspicious traits (near-identical phrasing, citation cycles to the same primary, all on `recent-domain`s)
+- `cohort-homogeneity: <pattern>` — multiple sources within a cohort share suspicious traits. `<pattern>` is a **short hyphenated descriptor** (e.g. `near-identical-phrasing`, `citation-cycle`, `recent-domain-cluster`, `shortage-news-cluster`, `same-primary-citation`, `snippet-only-content`) — not a sentence. Long explanations belong in `cohort_spread`.
 
-**Flag values use only the strict tokens above.** Clarifying detail belongs in `cohort_spread` or `summary`, not embedded in the flag value. Format: `flags: [single-source, cohort-gap: critical-adversarial, pricing-mode]` (allowed); `flags: [single-source for X reason (additional context)]` (not allowed — put the reason in `summary` or `cohort_spread`).
+**Flag values use only the strict tokens above.** For parametrized flags (`cohort-gap: <slot>`, `cohort-homogeneity: <pattern>`), the `<slot>` is a cohort name from the taxonomy and the `<pattern>` is a short hyphenated descriptor — never a sentence. Clarifying detail belongs in `cohort_spread` or `summary`, not embedded in the flag value.
+
+Allowed: `flags: [single-source, cohort-gap: critical-adversarial, cohort-homogeneity: shortage-news-cluster, pricing-mode]`
+
+Not allowed: `flags: [single-source for X reason (additional context)]`, `flags: [cohort-homogeneity: independent-review pages returned only snippet-level content; primary recommendations triangulated via search summaries plus Reddit aggregation]` — the explanation goes in `summary` or `cohort_spread`.
 
 `cohort_spread` is a human-readable single line, not a structured object. Example: `1× vendor, 2× independent-review, 1× community-forum, 0× critical-adversarial — gap: critical slot empty after targeted query`.
 
