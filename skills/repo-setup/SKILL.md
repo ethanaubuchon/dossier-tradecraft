@@ -21,7 +21,7 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
    - not on `main` → `git fetch origin main:main` (fast-forward-only update of the local ref; refuses if it would diverge).
 4. **Prune merged work.** Enumerate merged branches with `git branch --merged origin/main`, add the squash-merged ones (see caveat), and for each — excluding `main` and the current branch:
    - Remove its worktree if present: `git worktree remove .worktrees/<branch>` (`--force` only if an override opts in).
-   - Delete its plan file: `rm -f .claude/plans/<branch>.md` (gitignored, per-branch, safe).
+   - Delete its plan file: `rm -f .claude/plans/<branch>.md` using the `/`→`-` flattened branch name (`feat/foo` → `.claude/plans/feat-foo.md`, matching `plan-file`); gitignored, per-branch, safe.
    - Delete the branch: `git branch -d <branch>` for merge-commit / fast-forward merges; `git branch -D <branch>` for squash-merged branches (`-d` refuses them — `-D` is safe because the caveat's check already confirmed the content landed).
 
    Then `git worktree prune` to clear stale administrative entries.
@@ -47,7 +47,7 @@ This primitive stops at "branch + worktree exist." Deep, stack-specific provisio
 - **Worktree policy** — a repo that doesn't want worktrees overrides step 5 with a plain `git switch -c <branch> origin/main`.
 - **Dirty-tree handling** — stash-and-restore instead of stop.
 
-Overrides must honor the contract (same name, same "fresh branch + worktree off updated main" outcome) so the rest of `/implement` keeps working. Add `.worktrees/` to the repo's `.gitignore` if it isn't already.
+Overrides must honor the contract (same name, same "fresh branch + worktree off updated main" outcome) so the rest of `/implement` keeps working. Add `.worktrees/` and `.claude/plans/` to the repo's `.gitignore` if they aren't already.
 
 ## Future scope
 
