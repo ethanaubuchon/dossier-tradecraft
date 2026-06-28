@@ -32,12 +32,18 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
 
    Delete the matches with `git branch -D`. Without `gh` auth and with an advanced `main`, a squash-merged branch may survive the prune — acceptable; the next clean run catches it.
 5. **Create the feature branch + worktree off fresh main.** `git worktree add .worktrees/<branch> -b <branch> origin/main` — one step: branch cut from up-to-date `main`, checked out in an isolated worktree.
+6. **Ensure ignores.** From the main checkout, make sure `.worktrees/` and `.claude/plans/` are in the repo's `.gitignore` — append each if missing, no-op if present — so the `.worktrees/` dir never shows as untracked here:
+   ```
+   [ -s .gitignore ] && [ -n "$(tail -c1 .gitignore)" ] && printf '\n' >> .gitignore
+   for p in '.worktrees/' '.claude/plans/'; do grep -qxF "$p" .gitignore 2>/dev/null || printf '%s\n' "$p" >> .gitignore; done
+   ```
+   The leading guard appends a newline first if the file doesn't end in one, so an entry isn't glued onto the last line. Idempotent — a one-time addition per repo, committed via a normal branch/PR. (`.claude/plans/` is also ensured independently by `plan-file` in the worktree where plans are actually written — step 6 covers the root checkout; `plan-file` is the real plan-leak backstop.)
 
 ## Output / contract
 
 - **In:** repo state + a branch name.
 - **Out:** the created branch name and its worktree path (`.worktrees/<branch>`), surfaced so `plan-file` and the later primitives operate inside the worktree.
-- **Side effects:** local `main` fast-forwarded; previously-merged branches + their worktrees + their plan files removed; new branch + worktree created. No pushes or other network *writes*; the optional squash-merge `gh pr list` check is a network *read* and needs auth.
+- **Side effects:** local `main` fast-forwarded; previously-merged branches + their worktrees + their plan files removed; new branch + worktree created; `.worktrees/` and `.claude/plans/` ensured in `.gitignore`. No pushes or other network *writes*; the optional squash-merge `gh pr list` check is a network *read* and needs auth.
 
 ## Project overrides
 
@@ -46,8 +52,9 @@ This primitive stops at "branch + worktree exist." Deep, stack-specific provisio
 - **Port / secret / compose setup** — e.g. domainator's `setup-feature.sh` (slot-based ports, `.env` secret-gen, `compose up`).
 - **Worktree policy** — a repo that doesn't want worktrees overrides step 5 with a plain `git switch -c <branch> origin/main`.
 - **Dirty-tree handling** — stash-and-restore instead of stop.
+- **Containerized verification seam** — when tests run via `podman/docker compose`, a bare worktree breaks two ways: the gitignored `.env` (and other secrets) won't exist in `.worktrees/<branch>`, so compose's `env_file` fails — symlink or copy them in; and compose must be run **from inside the worktree dir**, because bind-mounts are relative and running from the repo root silently exercises `main`, not your branch. Override `repo-setup` (and see `/implement`'s execute step) to set this up.
 
-Overrides must honor the contract (same name, same "fresh branch + worktree off updated main" outcome) so the rest of `/implement` keeps working. Add `.worktrees/` and `.claude/plans/` to the repo's `.gitignore` if they aren't already.
+Overrides must honor the contract (same name, same "fresh branch + worktree off updated main" outcome) so the rest of `/implement` keeps working. (Step 6 already ensures `.worktrees/` and `.claude/plans/` are gitignored.)
 
 ## Future scope
 
