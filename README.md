@@ -1,6 +1,6 @@
 # dossier-tradecraft
 
-Slash commands and skills for [Claude Code](https://claude.ai/code) that extend [dossier-mcp](https://github.com/ethanaubuchon/dossier-mcp) with opinionated workflows for research, design, project scoping, and vault context loading.
+Slash commands and skills for [Claude Code](https://claude.ai/code) that extend [dossier-mcp](https://github.com/ethanaubuchon/dossier-mcp) with opinionated workflows for research, design, project scoping, feature implementation, and vault context loading.
 
 These workflows are an explicit add-on to dossier-mcp — they assume a Dossier-style vault and call dossier-mcp's tools throughout. Without that setup, nothing here works as a standalone tool.
 
@@ -31,17 +31,17 @@ The installer symlinks `commands/`, `skills/`, and `agents/` into `~/.claude/`. 
 | `/design [topic]` | Early-stage design exploration. Conversation-shaped dialog over a single living design note; required `## Approach` section; re-entrant for refinement. Sits between `/research` and `/scope`. |
 | `/scope [topic]` | Project-level scoping. Refines a single living scope doc per project; re-entrant; required `## Unknowns` section. Loads upstream design doc (if any exists) for context. |
 | `/decompose [topic]` | Feature/story breakdown. Consumes a `ready-for-decompose` scope doc and produces a task graph in the project's issue tracker (GitHub via `gh`, with vault fallback). Tracker is canonical; scope doc gets a `## Tracked at` breadcrumb. |
+| `/implement [issue#]` | Feature implementation in a repo. Ticket-driven (issue# / spec-path / explicit ask) → `repo-setup` (branch + worktree) → approval-gated `plan-file` → develop-to-plan (own flow; no superpowers/TDD by default) → draft PR → `agent-review` loop with a human ready-to-publish gate → squash-clean finalize. Thin recipe over six overridable primitives; only hard dependency is dossier-mcp. |
 | `/dossier [task]` | Thin auxiliary command that forces vault profile loading before any other action. Solves the failure mode where multi-part prompts cause Claude to skip profile-load. |
 
 Each command's full behavior is documented in the corresponding file under `commands/`.
 
-The phase recipes (`/design`, `/scope`, `/decompose`, and the planned `/implement`) share a cross-recipe **kickback** convention: downstream work that surfaces an upstream concern (or an information gap) prompts the agent to ask whether to context-switch back. Phases aren't strictly one-way. `/decompose` further refines this — research is handled inline rather than as a kickback, since research produces information rather than owned decisions.
+The phase recipes (`/design`, `/scope`, `/decompose`, `/implement`) share a cross-recipe **kickback** convention: downstream work that surfaces an upstream concern (or an information gap) prompts the agent to ask whether to context-switch back. Phases aren't strictly one-way. `/decompose` and `/implement` further refine this — research is handled inline rather than as a kickback, since research produces information rather than owned decisions. `/implement` is terminal: it kicks back to `/scope`/`/design` but its forward handoff is the PR, for a human.
 
 ## Roadmap
 
 Planned but not shipped — see the [Issues tab](https://github.com/ethanaubuchon/dossier-tradecraft/issues) for state and discussion:
 
-- **`/implement`** — feature implementation in a repo or vault. Wraps repo lifecycle (branch, worktree, PR) and review automation.
 - **Plugin packaging** — repackage as a proper Claude Code plugin once the workflows have weeks of real use.
 
 ## License
