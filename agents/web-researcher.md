@@ -82,6 +82,7 @@ When in pricing mode:
 - **Tiered output when used pricing is included** (only after consent — see below): report `new` and `used` as separate tiers, never blended.
   - `new: median $Y, range $A–$B (N sources, all manufacturer-direct or major-retailer)`
   - `used: median $Z, range $C–$D (M sources, marketplace-used / refurbished / etc.)`
+  - When the query also spans a second axis (multiple generations/specs), split each tier by spec using composite keys — see **Second axis** under Output schema.
 - **No text-pattern outlier exclusion.** Don't filter by phrases like "moving sale" or "as-is" — sample-widening with median absorption is more honest than unreliable text matching.
 - **Single-quote case:** if only one usable price source exists, return it with the `single-source` flag and the qualifier "could not corroborate" — do **not** silently widen to marketplace listings to reach a sample.
 - **Low retail sample:** if `manufacturer-direct` + `major-retailer` count is <3 after the targeted retail query in Step 3, return what you have with the `cohort-gap: major-retailer` flag (or `single-source` if N=1). The orchestrator will gate any widening decision; never silently include marketplace listings.
@@ -113,7 +114,24 @@ refurbished: median $W, range $E–$F (K sources, manufacturer-direct refurb)
 
 **Do not collapse pricing tiers into markdown headers and bullets** — that breaks downstream parsers (`dispatch-exploration`, `capture-to-vault`). Supplemental commentary (context, caveats, time-sensitivity notes) belongs in a short `summary:` narrative line above the tiers, or as a `caveat:` field below `flags:`. Single-tier pricing returns a single line under `summary:` — no need to invent a `new:` key for a one-tier result.
 
-**Tier keys are plain tokens** — `new:`, `used:`, `refurbished:`, `trade-in:`, `open-box:`, `marketplace:`. Do **not** embed parenthetical qualifiers in keys (`new (current MSRP reference):` is wrong — the qualifier goes in the value or in `summary:`). If you need to distinguish two pricing scenarios that don't fit a single row (e.g. used Intel-era units vs. used current-gen marketplace inflation), prefer two distinct keys (`used:` for one, `marketplace:` for the other) over one parenthesized key, or fold the distinction into the `summary:` narrative.
+**Tier keys are plain tokens** — `new:`, `used:`, `refurbished:`, `trade-in:`, `open-box:`, `marketplace:`. Do **not** embed parenthetical qualifiers in keys (`new (current MSRP reference):` is wrong — the qualifier goes in the value or in `summary:`).
+
+**Second axis (generation / spec) — composite keys.** When a pricing query spans **≥2 distinct product generations or specs within the same tier set** (e.g. M1 vs. M4 Mac minis, RTX 4080 vs. 4090), give each (tier, spec) its own row using a composite key `<tier>.<spec-slug>:`. The segment up to the **first `.`** is a tier token from the vocabulary above; everything after is a free-form lowercase spec slug (`m1`, `m4`, `16gb`, `rtx-4090` — hyphens and further dots allowed inside the slug, since the split is on the *first* dot only, so hyphenated tiers like `open-box.m2:` and hyphenated slugs like `used.rtx-4090:` both parse cleanly).
+
+- **Conditional activation:** emit the `.spec` suffix only when ≥2 specs are actually reported across the tier set. A single-generation result keeps plain keys (`used:`, `new:`) — never pad with `.default` / `.base`.
+- **Tier-major ordering:** group rows by tier in the established order (new → used → refurbished → marketplace → open-box → trade-in); within a tier, list the focal / newest spec first.
+- For the same-tier-multi-spec case, prefer composite keys over splitting one tier across two different tier tokens (e.g. don't reach for a `marketplace:` row just to separate two `used:` generations — use `used.m1:` / `used.m4:`). Reserve `summary:` as the escape valve when the matrix has >2 axes or is too sparse/messy to tabulate — fold the distinction into narrative rather than forcing composite rows.
+
+Worked example (used-Mac-mini query surfacing four generation/tier cells):
+
+```
+summary: Current-gen M4 marketplace prices are shortage-inflated vs the $599 MSRP; treat as anomaly, not normal-market signal.
+new.m4:         median $599, range $599–$599  (2 sources, manufacturer-direct)
+used.m1:        median $375, range $300–$450  (2 sources, refurbisher-aggregated)
+refurbished.m2: range $319–$849               (1 source, manufacturer-direct refurb — historical, out of stock)
+marketplace.m4: range $700–$979               (1 source, mainstream-news-reported eBay listings — shortage-inflated)
+flags: [pricing-mode, single-source, cohort-gap: major-retailer]
+```
 
 `flags` is a list (omit the field or set to `[]` if none apply). The vocabulary:
 

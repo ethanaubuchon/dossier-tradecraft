@@ -57,6 +57,16 @@ The input shape is **stable** — callers do not need to opt into the cross-veri
      flags: <flags>
    ```
 
+   **Web result (pricing mode, second axis — composite `<tier>.<spec>` keys):**
+   ```
+   <query>
+     new.m4:         median $599, range $599–$599 (2 sources, manufacturer-direct)
+     used.m1:        median $375, range $300–$450 (2 sources, refurbisher-aggregated)
+     marketplace.m4: range $700–$979              (1 source, shortage-inflated)
+     flags: <flags>
+   ```
+   Tier token is the segment before the **first** `.`; the rest is a free-form spec slug (split on first dot, so `open-box.m2` / `used.rtx-4090` parse cleanly). Pass composite keys through verbatim.
+
    **Web result (no useful data):** `<query> → no useful results`.
 
 ## Web-researcher findings shape
