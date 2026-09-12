@@ -70,11 +70,23 @@ Anything the story did not fully answer. Resolve with the user before coding, or
 3. Scan the affected files briefly to ground the approach in real code (do not start modifying them).
 4. Draft the plan using the structure above.
 5. Ensure `.claude/plans/` is gitignored (add it if missing), then write the plan to `.claude/plans/<branch>.md` (flattened name).
-6. Show the plan to the user and wait for explicit approval.
-7. Iterate on feedback — update the plan file in place.
+6. Hand the plan off for approval per **Approval handoff** below, and wait for explicit approval.
+7. Iterate on feedback — update the plan file in place, then re-surface only what changed and what is still open (see **Approval handoff**).
 8. Only after approval does the recipe proceed to implementation — referencing the plan file on subsequent turns as the source of truth.
 
 Approval signals: "looks good", "proceed", "yes", "go ahead", or a direct instruction like "start implementing X."
+
+## Approval handoff
+
+The plan file is the durable artifact, but it lives in a worktree the user is usually not standing in. **Naming the file is not showing the plan.** Surface the following in the conversation itself — the summary never replaces writing the file:
+
+1. **The absolute path**, resolved from the worktree root — never repo-relative, never `~`-relative. The user is typically in the main checkout or another directory entirely, so a relative path gives them nothing to open.
+2. **A summary that stands alone.** Approving without opening the file is the normal path, not a shortcut. Include the change summary, the affected-files list with its one-line notes, the approach as a few bullets, and one line on test coverage.
+3. **Every open question, in full** — numbered, each carrying your recommended default, so "go with your defaults" is a complete reply. Never compress them into a count or a pointer to the file. If there are none, **say so explicitly**; silence reads as "unread," not "none."
+
+Ask for approval in **plain conversational text**. Don't route it through a structured-choice prompt (e.g. `AskUserQuestion`) — approval usually arrives mixed with open-question answers and plan edits, and a fixed option list can't carry that.
+
+On revision, re-surface what changed and what remains open — not the whole plan again.
 
 ## Enforcement
 
@@ -96,6 +108,7 @@ On a greenfield story, the affected-files list and approach often can't be fully
 
 - **In:** a story/ticket reference + the branch (from `repo-setup`).
 - **Out:** an approved plan at `.claude/plans/<flattened-branch>.md`; the path is passed forward to execution and to any dispatched subagent.
+- **Surfaced to the user:** the plan file's **absolute** path, a stand-alone summary, and every open question in full — see **Approval handoff**.
 - **Side effects:** writes the plan file; **gates** implementation until the plan exists and is approved.
 
 ## Project overrides
