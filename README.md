@@ -23,6 +23,12 @@ cd ~/workspace/dossier-tradecraft
 
 The installer symlinks `commands/`, `skills/`, and `agents/` into `~/.claude/`. Edits to the clone propagate immediately — no rebuild step. Set `CLAUDE_DIR` to override the default `~/.claude`.
 
+`/implement` switches the session into a git worktree via Claude Code's `EnterWorktree` tool, whose usage rule asks for worktrees to be explicitly requested by the user or CLAUDE.md/memory. The skill states that invoking `/implement` is that request; to make it unambiguous, add a line like this to your user-level `~/.claude/CLAUDE.md`:
+
+```markdown
+- `/implement` / `repo-setup` work happens in a git worktree under `.worktrees/`: enter it with `EnterWorktree(path: ...)` and run commands bare — never prefix them with `cd <worktree> &&` or `git -C`.
+```
+
 ## Commands shipped
 
 | Command | What it does |

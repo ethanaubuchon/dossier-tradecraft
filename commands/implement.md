@@ -49,7 +49,7 @@ This is the `/implement` recipe of the dossier-tradecraft framework — Phase 4,
    b. **`cleanup-artifacts`.** Invoke the skill to delete this branch's plan file.
    c. **`publish-pr`.** Invoke the skill with the branch, the sourced commit message, and the PR ref. It squashes (soft-reset + `git add -A` + recommit + `--force-with-lease`) and marks the PR ready.
 
-10. **Exit.** Surface: the PR ref (URL), a one-line summary of what shipped, and the status — **PR is ready for human review, not merged.** Merging stays a human action; `/implement` ends at "ready." Then return the session to the main checkout — the inverse of `repo-setup`'s enter step (`ExitWorktree(action: "keep")` in Claude Code) — leaving the worktree on disk; the next `repo-setup` prunes it once the PR merges.
+10. **Exit.** Surface: the PR ref (URL), a one-line summary of what shipped, and the status — **PR is ready for human review, not merged.** Merging stays a human action; `/implement` ends at "ready." Then return the session to the main checkout — the inverse of `repo-setup`'s enter step (`ExitWorktree(action: "keep")` in Claude Code; load via `ToolSearch` `select:ExitWorktree` if deferred) — leaving the worktree on disk; the next `repo-setup` prunes it once the PR merges. Follow-up work on the PR (human review comments) re-enters the worktree per `repo-setup`'s **Re-entering later** note — never by prefixing commands.
 
 ## Cross-recipe principles
 

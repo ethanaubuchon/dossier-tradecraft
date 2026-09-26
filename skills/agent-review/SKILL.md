@@ -29,7 +29,7 @@ A project override can replace or extend these. If the AC / plan context isn't p
 
 1. Resolve the diff — `git diff <range>` for a ref range, or `gh pr diff <number>` for a PR number — plus the list of changed files and the context (`plan-file` path + AC) if available.
 2. **Dispatch a review subagent restricted to read-only tools** (no Edit/Write/NotebookEdit — e.g. a read-only agent type), so the no-side-effects contract is *structurally* enforced, not just instructed. Instruct it to:
-   - read the diff and the changed files in full;
+   - read the diff and the changed files in full — from the worktree: pass its absolute path in the prompt and tell the subagent to read files there (its own cwd may be the main checkout, i.e. `main`'s versions);
    - check against the criteria and the AC / plan context;
    - **be skeptical and concrete — verify claims, don't praise**; where a claim is checkable (a command, a path, an invariant), check it rather than trust it;
    - return findings in the structured format below, plus a one-line verdict.
