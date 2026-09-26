@@ -1,11 +1,11 @@
 ---
 name: repo-setup
-description: Use at the start of /implement's repo path to land in a clean working state — fetch, fast-forward main, prune merged branches/worktrees/plan-files, then create the feature branch + worktree off fresh main. Repo-only; project-overridable for deep provisioning.
+description: Use at the start of /implement's repo path to land in a clean working state — fetch, fast-forward main, prune merged branches/worktrees/plan-files, then create the feature branch + worktree off fresh main and switch the session into it. Repo-only; project-overridable for deep provisioning.
 ---
 
 # Repo Setup
 
-First step of `/implement`'s repo path. Takes the repo from whatever state it's in to a fresh feature branch + worktree cut off an up-to-date `main`, clearing the debris of previously-merged work on the way. Assumes a git repo — the recipe's repo-vs-vault context branch runs before this.
+First step of `/implement`'s repo path. Takes the repo from whatever state it's in to a fresh feature branch + worktree cut off an up-to-date `main` — with the session standing in that worktree — clearing the debris of previously-merged work on the way. Assumes a git repo — the recipe's repo-vs-vault context branch runs before this.
 
 ## Input
 
@@ -38,21 +38,22 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
    for p in '.worktrees/' '.claude/plans/'; do grep -qxF "$p" .gitignore 2>/dev/null || printf '%s\n' "$p" >> .gitignore; done
    ```
    The leading guard appends a newline first if the file doesn't end in one, so an entry isn't glued onto the last line. Idempotent — a one-time addition per repo, committed via a normal branch/PR. (`.claude/plans/` is also ensured independently by `plan-file` in the worktree where plans are actually written — step 6 covers the root checkout; `plan-file` is the real plan-leak backstop.)
+7. **Enter the worktree.** Switch the session's working directory into it — in Claude Code, `EnterWorktree(path: ".worktrees/<branch>")` (the `path` form accepts a worktree made by `git worktree add`). Harness without an equivalent tool → one persistent `cd .worktrees/<branch>`. From here on every command runs bare: **never prefix commands with `cd .worktrees/<branch> &&` or `git -C …`** — prefixed commands are harder to read and break cwd-keyed hooks. If a command seems to need a prefix, this step was skipped; do it now instead.
 
 ## Output / contract
 
 - **In:** repo state + a branch name.
-- **Out:** the created branch name and its worktree path (`.worktrees/<branch>`), surfaced so `plan-file` and the later primitives operate inside the worktree.
-- **Side effects:** local `main` fast-forwarded; previously-merged branches + their worktrees + their plan files removed; new branch + worktree created; `.worktrees/` and `.claude/plans/` ensured in `.gitignore`. No pushes or other network *writes*; the optional squash-merge `gh pr list` check is a network *read* and needs auth.
+- **Out:** the created branch name and its worktree path (`.worktrees/<branch>`), with the session's working directory switched into it so `plan-file` and the later primitives operate inside the worktree.
+- **Side effects:** local `main` fast-forwarded; previously-merged branches + their worktrees + their plan files removed; new branch + worktree created; `.worktrees/` and `.claude/plans/` ensured in `.gitignore`; session cwd moved into the worktree. No pushes or other network *writes*; the optional squash-merge `gh pr list` check is a network *read* and needs auth.
 
 ## Project overrides
 
-This primitive stops at "branch + worktree exist." Deep, stack-specific provisioning is project-override territory, layered *after* the generic steps:
+This primitive stops at "branch + worktree exist, session inside it." Deep, stack-specific provisioning is project-override territory, layered *after* the generic steps:
 
 - **Port / secret / compose setup** — e.g. domainator's `setup-feature.sh` (slot-based ports, `.env` secret-gen, `compose up`).
-- **Worktree policy** — a repo that doesn't want worktrees overrides step 5 with a plain `git switch -c <branch> origin/main`.
+- **Worktree policy** — a repo that doesn't want worktrees overrides step 5 with a plain `git switch -c <branch> origin/main` (and drops step 7).
 - **Dirty-tree handling** — stash-and-restore instead of stop.
-- **Containerized verification seam** — when tests run via `podman/docker compose`, a bare worktree breaks two ways: the gitignored `.env` (and other secrets) won't exist in `.worktrees/<branch>`, so compose's `env_file` fails — symlink or copy them in; and compose must be run **from inside the worktree dir**, because bind-mounts are relative and running from the repo root silently exercises `main`, not your branch. Override `repo-setup` (and see `/implement`'s execute step) to set this up.
+- **Containerized verification seam** — when tests run via `podman/docker compose`, a bare worktree breaks two ways: the gitignored `.env` (and other secrets) won't exist in `.worktrees/<branch>`, so compose's `env_file` fails — symlink or copy them in; and compose must be run **from inside the worktree dir** (step 7 puts the session there), because bind-mounts are relative and running from the repo root silently exercises `main`, not your branch. Override `repo-setup` (and see `/implement`'s execute step) to set this up.
 
 Overrides must honor the contract (same name, same "fresh branch + worktree off updated main" outcome) so the rest of `/implement` keeps working. (Step 6 already ensures `.worktrees/` and `.claude/plans/` are gitignored.)
 
