@@ -26,7 +26,7 @@ This is the `/implement` recipe of the dossier-tradecraft framework — Phase 4,
    - **explicit ask** (prose) → treat the prose as the scope for this session.
    - **nothing / no ticket** → the bare no-ticket path is deferred; ask the user to point at an issue or spec (or write a ticket first via `/decompose` or ad hoc). Don't invent scope.
 
-3. **`repo-setup`.** Invoke the `repo-setup` skill. Derive the branch name from the ticket as `<type>/<desc>` (`feat/`, `fix/`, `chore/`, `story/S-<id>-<desc>`); pass it in. The skill fast-forwards `main`, prunes merged work, and creates the feature branch + worktree, then switches the session into it (`EnterWorktree`). All later steps run bare from there — no `cd <worktree> &&` / `git -C` prefixes.
+3. **`repo-setup`.** Invoke the `repo-setup` skill. Derive the branch name from the ticket as `<type>/<desc>` (`feat/`, `fix/`, `chore/`, `story/S-<id>-<desc>`); pass it in. The skill fast-forwards `main`, prunes merged work, and creates the feature branch + worktree, then switches the session's cwd into it and verifies the switch. Run it in the main session. All later steps run bare from there — no `cd <worktree> &&` / `git -C` prefixes.
 
 4. **`plan-file` gate.** Invoke the `plan-file` skill with the ticket reference. It writes an **approval-blocked** plan for the branch (the skill owns the path + naming) and blocks implementation until the plan exists and the user approves it. For genuinely trivial changes, the skill's size-skip applies — state the one-line skip reason so it's auditable. **Write no implementation code before approval.**
 
@@ -49,7 +49,7 @@ This is the `/implement` recipe of the dossier-tradecraft framework — Phase 4,
    b. **`cleanup-artifacts`.** Invoke the skill to delete this branch's plan file.
    c. **`publish-pr`.** Invoke the skill with the branch, the sourced commit message, and the PR ref. It squashes (soft-reset + `git add -A` + recommit + `--force-with-lease`) and marks the PR ready.
 
-10. **Exit.** Surface: the PR ref (URL), a one-line summary of what shipped, and the status — **PR is ready for human review, not merged.** Merging stays a human action; `/implement` ends at "ready."
+10. **Exit.** Surface: the PR ref (URL), a one-line summary of what shipped, and the status — **PR is ready for human review, not merged.** Merging stays a human action; `/implement` ends at "ready." Then return the session to the main checkout — the inverse of `repo-setup`'s enter step (`ExitWorktree(action: "keep")` in Claude Code) — leaving the worktree on disk; the next `repo-setup` prunes it once the PR merges.
 
 ## Cross-recipe principles
 

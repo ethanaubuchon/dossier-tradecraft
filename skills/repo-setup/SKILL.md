@@ -14,6 +14,7 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
 
 ## Steps
 
+0. **Start from the main checkout.** Steps 1–6 resolve relative paths and "current branch" against the main checkout, so get there first — a session may still be standing in a previous run's worktree (a second `/implement` in the same session) or have been launched inside one. Resolve the root once: `git worktree list --porcelain | sed -n '1s/^worktree //p'` (the first entry is always the main checkout) — call it `<root>`. If the session is in an `EnterWorktree` session, leave it with `ExitWorktree(action: "keep")` (never `remove` — that's a prior branch's work); otherwise, if `git rev-parse --show-toplevel` isn't `<root>`, `cd <root>`. No-op on a normal first run.
 1. **Guard a dirty tree.** If `git status --porcelain` is non-empty, stop and surface the changes — don't fetch/prune over dirty state. (A project override may stash-and-restore instead.)
 2. **Fetch.** `git fetch --prune origin` — updates remote-tracking refs and drops refs for branches deleted on the remote.
 3. **Fast-forward `main`.** Bring local `main` to `origin/main`, never a merge commit:
@@ -38,13 +39,20 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
    for p in '.worktrees/' '.claude/plans/'; do grep -qxF "$p" .gitignore 2>/dev/null || printf '%s\n' "$p" >> .gitignore; done
    ```
    The leading guard appends a newline first if the file doesn't end in one, so an entry isn't glued onto the last line. Idempotent — a one-time addition per repo, committed via a normal branch/PR. (`.claude/plans/` is also ensured independently by `plan-file` in the worktree where plans are actually written — step 6 covers the root checkout; `plan-file` is the real plan-leak backstop.)
-7. **Enter the worktree.** Switch the session's working directory into it — in Claude Code, `EnterWorktree(path: ".worktrees/<branch>")` (the `path` form accepts a worktree made by `git worktree add`). Harness without an equivalent tool → one persistent `cd .worktrees/<branch>`. From here on every command runs bare: **never prefix commands with `cd .worktrees/<branch> &&` or `git -C …`** — prefixed commands are harder to read and break cwd-keyed hooks. If a command seems to need a prefix, this step was skipped; do it now instead.
+7. **Enter the worktree.** Switch the session's working directory into it, using the absolute path `<root>/.worktrees/<branch>`:
+   - **Claude Code** → `EnterWorktree(path: "<root>/.worktrees/<branch>")` — the `path` form accepts a worktree made by `git worktree add`. Invoking `/implement` / `repo-setup` *is* the explicit instruction to work in a worktree that the tool's usage rule asks for; don't skip it on those grounds. If the tool is deferred, load it first (`ToolSearch` `select:EnterWorktree`).
+   - **Harness without an equivalent tool** → one persistent `cd <root>/.worktrees/<branch>`.
+   - **Main session only.** Run this step in the main session, not a subagent — a subagent's cwd is pinned, so the switch is rejected or affects only that agent. Subagents dispatched later get the worktree's absolute path in their prompt.
+
+   **Verify the switch:** `git rev-parse --show-toplevel` must print `<root>/.worktrees/<branch>` and `git branch --show-current` must print `<branch>`. If either doesn't match (or the tool call was rejected), **stop and surface it to the user** — don't fall back to prefixing commands.
+
+   From here on every command runs bare: **never prefix commands with `cd .worktrees/<branch> &&` or `git -C …`** — prefixed commands are harder to read and break hooks that match on the command's prefix or cwd.
 
 ## Output / contract
 
 - **In:** repo state + a branch name.
-- **Out:** the created branch name and its worktree path (`.worktrees/<branch>`), with the session's working directory switched into it so `plan-file` and the later primitives operate inside the worktree.
-- **Side effects:** local `main` fast-forwarded; previously-merged branches + their worktrees + their plan files removed; new branch + worktree created; `.worktrees/` and `.claude/plans/` ensured in `.gitignore`; session cwd moved into the worktree. No pushes or other network *writes*; the optional squash-merge `gh pr list` check is a network *read* and needs auth.
+- **Out:** the created branch name and its absolute worktree path (`<root>/.worktrees/<branch>`), with the session's working directory switched into it so `plan-file` and the later primitives operate inside the worktree.
+- **Side effects:** local `main` fast-forwarded; previously-merged branches + their worktrees + their plan files removed; new branch + worktree created; `.worktrees/` and `.claude/plans/` ensured in `.gitignore`; session cwd moved out of any prior worktree (step 0) and into the new one (step 7). No pushes or other network *writes*; the optional squash-merge `gh pr list` check is a network *read* and needs auth.
 
 ## Project overrides
 
@@ -55,7 +63,7 @@ This primitive stops at "branch + worktree exist, session inside it." Deep, stac
 - **Dirty-tree handling** — stash-and-restore instead of stop.
 - **Containerized verification seam** — when tests run via `podman/docker compose`, a bare worktree breaks two ways: the gitignored `.env` (and other secrets) won't exist in `.worktrees/<branch>`, so compose's `env_file` fails — symlink or copy them in; and compose must be run **from inside the worktree dir** (step 7 puts the session there), because bind-mounts are relative and running from the repo root silently exercises `main`, not your branch. Override `repo-setup` (and see `/implement`'s execute step) to set this up.
 
-Overrides must honor the contract (same name, same "fresh branch + worktree off updated main" outcome) so the rest of `/implement` keeps working. (Step 6 already ensures `.worktrees/` and `.claude/plans/` are gitignored.)
+Overrides must honor the contract (same name, same "fresh branch + worktree off updated main, session cwd inside it" outcome) so the rest of `/implement` keeps working. (Step 6 already ensures `.worktrees/` and `.claude/plans/` are gitignored.)
 
 ## Future scope
 
