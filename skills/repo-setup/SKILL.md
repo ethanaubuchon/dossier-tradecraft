@@ -23,7 +23,13 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
 3. **Fast-forward `main`.** Bring local `main` to `origin/main`, never a merge commit:
    - on `main` → `git merge --ff-only origin/main`
    - not on `main` → `git fetch origin main:main` (fast-forward-only update of the local ref; refuses if it would diverge).
-4. **Prune merged work.** Enumerate merged branches with `git branch --merged origin/main`, add the squash-merged ones (see caveat), and for each — excluding `main`, the current branch, and the starting branch/worktree recorded in step 0:
+4. **Prune merged work.** Enumerate merged branches with `git branch --merged origin/main`, add the squash-merged ones (see caveat), then drop `main`, the current branch, the starting branch/worktree recorded in step 0, and the in-use candidates below.
+
+   **In-use exclusions.** Another session's freshly cut branch has no commits yet, so its tip is at or behind `origin/main` — indistinguishable from a fast-forward merge (and, at `origin/main`'s tip, its two-dot diff is empty too). Removing its worktree also deletes the plan file `plan-file` wrote inside it, since ignored files don't block `git worktree remove`. Skip the whole candidate — worktree, plan file, and branch, whichever list (merged or squash-merged) it came from — when either holds:
+   - **Its worktree is locked** — a `locked` line under its entry in `git worktree list --porcelain`. Step 5 locks every worktree it creates; `/implement` unlocks it at a normal exit and keeps it through a kickback or pause. List each skipped locked worktree in the output with its path — it may be a live or paused session, or a stale lock left by a crashed one; flag one as "merged but locked — unlock to prune" only when the tip-matched `gh` check below confirmed its PR merged (`--merged` alone also lists every fresh in-flight branch). The fix for a stale one is `git worktree unlock <path>` once the user confirms that session is gone. Never unlock automatically.
+   - **Its tip equals `origin/main`** (`git rev-parse <branch>` = `git rev-parse origin/main`) — it has no commits of its own, so there is nothing to have merged. A real fast-forward merge caught by this survives until `origin/main` advances past it.
+
+   For each remaining candidate:
    - Remove its worktree if present: `git worktree remove <root>/.worktrees/<branch>` (`--force` only if an override opts in).
    - Delete its plan file: `rm -f <root>/.claude/plans/<branch>.md` using the `/`→`-` flattened branch name (`feat/foo` → `.claude/plans/feat-foo.md`, matching `plan-file`); gitignored, per-branch, safe.
    - Delete the branch: `git branch -d <branch>` for merge-commit / fast-forward merges; `git branch -D <branch>` for squash-merged branches (`-d` refuses them — `-D` is safe because the caveat's check already confirmed the content landed).
@@ -31,11 +37,11 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
    Then `git worktree prune` to clear stale administrative entries.
 
    **Squash-merge caveat.** `git branch --merged origin/main` catches merge-commit and fast-forward merges but **not squash-merges** — and `/implement` squashes by default, so a just-merged branch won't show as merged (and `git branch -d` would refuse to delete it). Detect those separately, in order of reliability:
-   - `gh pr list --state merged --head <branch>` reports it merged — robust, but needs network + auth.
+   - `gh pr list --state merged --head <branch> --json headRefOid` reports a merged PR whose `headRefOid` equals the local branch tip — robust, but needs network + auth. The tip match matters: a reused branch name also matches an old merged PR.
    - `git diff origin/main..<branch>` (two-dot — compares the tip *trees*) is empty when the branch's change already landed and `main` hasn't moved since. Network-free fallback; a `main` that has advanced since the squash defeats it.
 
-   Delete the matches with `git branch -D`. Without `gh` auth and with an advanced `main`, a squash-merged branch may survive the prune — acceptable; the next clean run catches it.
-5. **Create the feature branch + worktree off fresh main.** `git worktree add <root>/.worktrees/<branch> -b <branch> origin/main` — one step: branch cut from up-to-date `main`, checked out in an isolated worktree.
+   Delete the matches (subject to the in-use exclusions above) with `git branch -D`. Without `gh` auth and with an advanced `main`, a squash-merged branch may survive the prune — acceptable; the next clean run catches it. One whose PR gained commits the local branch lacks (pushed from elsewhere or via the GitHub UI) fails the tip match and survives every run — it fails safe; once confirmed merged, remove it manually: `git worktree remove <path>` (unlock first if locked), then `git branch -D <branch>`.
+5. **Create the feature branch + worktree off fresh main.** `git worktree add --lock --reason "/implement in progress" <root>/.worktrees/<branch> -b <branch> origin/main` — one step: branch cut from up-to-date `main`, checked out in an isolated worktree, locked so a concurrent session's step 4 skips it. `/implement` releases the lock at its normal exit (step 10).
 6. **Ensure ignores.** Make sure `.worktrees/` and `.claude/plans/` are in the main checkout's `<root>/.gitignore` — append each if missing, no-op if present — so the `.worktrees/` dir never shows as untracked here:
    ```
    [ -s "<root>/.gitignore" ] && [ -n "$(tail -c1 "<root>/.gitignore")" ] && printf '\n' >> "<root>/.gitignore"
@@ -51,13 +57,13 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
 
    From here on every command runs bare: **never prefix commands with `cd .worktrees/<branch> &&` or `git -C …`** — prefixed commands are harder to read and break hooks that match on the command's prefix or cwd.
 
-   **Re-entering later.** To resume an existing branch's worktree (e.g. addressing human review comments after `/implement` exited), don't re-run this skill — repo-setup only creates new branches. Re-enter with the same enter-and-verify as this step: `EnterWorktree(path: "<root>/.worktrees/<branch>")` (or `cd`), then the verify.
+   **Re-entering later.** To resume an existing branch's worktree (e.g. addressing human review comments after `/implement` exited), don't re-run this skill — repo-setup only creates new branches. Re-enter with the same enter-and-verify as this step: `EnterWorktree(path: "<root>/.worktrees/<branch>")` (or `cd`), then the verify. Leave the worktree lock as found — a paused session's lock stays, and a worktree unlocked at a normal exit isn't re-locked (its commits already protect it).
 
 ## Output / contract
 
 - **In:** repo state + a branch name.
 - **Out:** the created branch name and its absolute worktree path (`<root>/.worktrees/<branch>`), with the session's working directory switched into it so `plan-file` and the later primitives operate inside the worktree.
-- **Side effects:** local `main` fast-forwarded; previously-merged branches + their worktrees + their plan files removed; new branch + worktree created; `.worktrees/` and `.claude/plans/` ensured in `.gitignore`; session cwd moved out of any prior worktree (step 0) and into the new one (step 7). No pushes or other network *writes*; the optional squash-merge `gh pr list` check is a network *read* and needs auth.
+- **Side effects:** local `main` fast-forwarded; previously-merged branches + their worktrees + their plan files removed (locked worktrees skipped and listed); new branch + locked worktree created; `.worktrees/` and `.claude/plans/` ensured in `.gitignore`; session cwd moved out of any prior worktree (step 0) and into the new one (step 7). No pushes or other network *writes*; the optional squash-merge `gh pr list` check is a network *read* and needs auth.
 
 ## Project overrides
 
@@ -68,7 +74,7 @@ This primitive stops at "branch + worktree exist, session inside it." Deep, stac
 - **Dirty-tree handling** — stash-and-restore instead of stop.
 - **Containerized verification seam** — when tests run via `podman/docker compose`, a bare worktree breaks two ways: the gitignored `.env` (and other secrets) won't exist in `.worktrees/<branch>`, so compose's `env_file` fails — symlink or copy them in; and compose must be run **from inside the worktree dir** (step 7 puts the session there), because bind-mounts are relative and running from the repo root silently exercises `main`, not your branch. Override `repo-setup` (and see `/implement`'s execute step) to set this up.
 
-Overrides must honor the contract (same name, same "fresh branch + worktree off updated main, session cwd inside it" outcome) so the rest of `/implement` keeps working. (Step 6 already ensures `.worktrees/` and `.claude/plans/` are gitignored.)
+Overrides must honor the contract (same name, same "fresh branch + worktree off updated main, session cwd inside it" outcome) so the rest of `/implement` keeps working. An override that creates the worktree itself must create it locked (`--lock`, or `git worktree lock` right after) — step 4's concurrency protection and `/implement`'s exit unlock depend on it. (Step 6 already ensures `.worktrees/` and `.claude/plans/` are gitignored.)
 
 ## Future scope
 
