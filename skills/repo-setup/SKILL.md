@@ -17,15 +17,15 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
 0. **Start from the main checkout.** Steps 1–6 resolve relative paths and "current branch" against the main checkout, so get there first — a session may still be standing in a previous run's worktree (a second `/implement` in the same session), have been launched inside one, or sit in a subdirectory.
    - **Resolve the root:** `git worktree list --porcelain | sed -n '1s/^worktree //p'` — the first entry is the main checkout, call it `<root>`. If that entry is followed by a `bare` line, the repo is a bare-repo layout with no main working tree: stop — that layout needs a project override.
    - **Record where you started:** the starting worktree (`git rev-parse --show-toplevel`) and its branch (`git branch --show-current`), before moving. Step 4 must not prune them — they may be a worktree the user owns and the session was launched in.
-   - **Move:** if `pwd -P` isn't `<root>`, first try `ExitWorktree(action: "keep")` (load via `ToolSearch` `select:ExitWorktree` if deferred; never `remove` — that's a prior branch's work). Don't rely on remembering whether you entered one — after `/clear` or compaction you may not; the tool reports when no worktree session is active. Then, if `pwd -P` still isn't `<root>`, `cd <root>`. No-op on a normal first run.
+   - **Move:** if `pwd -P` isn't `<root>`, first try `ExitWorktree(action: "keep")` (load via `ToolSearch` `select:ExitWorktree` if deferred; never `remove` — that's a prior branch's work). Don't rely on remembering whether you entered one — after `/clear` or compaction you may not; the tool reports when no worktree session is active. Then, if `pwd -P` still isn't `<root>`, `cd <root>` — and re-check `pwd -P`: the harness may reset a `cd` that leaves the launch directory, so if it didn't take, stop and surface it. No-op on a normal first run. Steps 4–6 anchor their file paths to `<root>` anyway, so they hold even if cwd drifts.
 1. **Guard a dirty tree.** If `git status --porcelain` is non-empty, stop and surface the changes — don't fetch/prune over dirty state. (A project override may stash-and-restore instead.)
 2. **Fetch.** `git fetch --prune origin` — updates remote-tracking refs and drops refs for branches deleted on the remote.
 3. **Fast-forward `main`.** Bring local `main` to `origin/main`, never a merge commit:
    - on `main` → `git merge --ff-only origin/main`
    - not on `main` → `git fetch origin main:main` (fast-forward-only update of the local ref; refuses if it would diverge).
 4. **Prune merged work.** Enumerate merged branches with `git branch --merged origin/main`, add the squash-merged ones (see caveat), and for each — excluding `main`, the current branch, and the starting branch/worktree recorded in step 0:
-   - Remove its worktree if present: `git worktree remove .worktrees/<branch>` (`--force` only if an override opts in).
-   - Delete its plan file: `rm -f .claude/plans/<branch>.md` using the `/`→`-` flattened branch name (`feat/foo` → `.claude/plans/feat-foo.md`, matching `plan-file`); gitignored, per-branch, safe.
+   - Remove its worktree if present: `git worktree remove <root>/.worktrees/<branch>` (`--force` only if an override opts in).
+   - Delete its plan file: `rm -f <root>/.claude/plans/<branch>.md` using the `/`→`-` flattened branch name (`feat/foo` → `.claude/plans/feat-foo.md`, matching `plan-file`); gitignored, per-branch, safe.
    - Delete the branch: `git branch -d <branch>` for merge-commit / fast-forward merges; `git branch -D <branch>` for squash-merged branches (`-d` refuses them — `-D` is safe because the caveat's check already confirmed the content landed).
 
    Then `git worktree prune` to clear stale administrative entries.
@@ -35,11 +35,11 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
    - `git diff origin/main..<branch>` (two-dot — compares the tip *trees*) is empty when the branch's change already landed and `main` hasn't moved since. Network-free fallback; a `main` that has advanced since the squash defeats it.
 
    Delete the matches with `git branch -D`. Without `gh` auth and with an advanced `main`, a squash-merged branch may survive the prune — acceptable; the next clean run catches it.
-5. **Create the feature branch + worktree off fresh main.** `git worktree add .worktrees/<branch> -b <branch> origin/main` — one step: branch cut from up-to-date `main`, checked out in an isolated worktree.
-6. **Ensure ignores.** From the main checkout, make sure `.worktrees/` and `.claude/plans/` are in the repo's `.gitignore` — append each if missing, no-op if present — so the `.worktrees/` dir never shows as untracked here:
+5. **Create the feature branch + worktree off fresh main.** `git worktree add <root>/.worktrees/<branch> -b <branch> origin/main` — one step: branch cut from up-to-date `main`, checked out in an isolated worktree.
+6. **Ensure ignores.** Make sure `.worktrees/` and `.claude/plans/` are in the main checkout's `<root>/.gitignore` — append each if missing, no-op if present — so the `.worktrees/` dir never shows as untracked here:
    ```
-   [ -s .gitignore ] && [ -n "$(tail -c1 .gitignore)" ] && printf '\n' >> .gitignore
-   for p in '.worktrees/' '.claude/plans/'; do grep -qxF "$p" .gitignore 2>/dev/null || printf '%s\n' "$p" >> .gitignore; done
+   [ -s "<root>/.gitignore" ] && [ -n "$(tail -c1 "<root>/.gitignore")" ] && printf '\n' >> "<root>/.gitignore"
+   for p in '.worktrees/' '.claude/plans/'; do grep -qxF "$p" "<root>/.gitignore" 2>/dev/null || printf '%s\n' "$p" >> "<root>/.gitignore"; done
    ```
    The leading guard appends a newline first if the file doesn't end in one, so an entry isn't glued onto the last line. Idempotent — a one-time addition per repo, committed via a normal branch/PR. (`.claude/plans/` is also ensured independently by `plan-file` in the worktree where plans are actually written — step 6 covers the root checkout; `plan-file` is the real plan-leak backstop.)
 7. **Enter the worktree.** Switch the session's working directory into it, using the absolute path `<root>/.worktrees/<branch>`:
@@ -47,7 +47,7 @@ First step of `/implement`'s repo path. Takes the repo from whatever state it's 
    - **Harness without an equivalent tool** → one persistent `cd <root>/.worktrees/<branch>`.
    - **Main session only.** Run this step in the main session, not a subagent — a subagent's cwd is pinned, so the switch is rejected or affects only that agent. Subagents dispatched later get the worktree's absolute path in their prompt.
 
-   **Verify the switch:** `realpath "$(git rev-parse --show-toplevel)"` must equal `realpath <root>/.worktrees/<branch>` (canonicalize both — a symlinked path would otherwise mismatch) and `git branch --show-current` must print `<branch>`. If either doesn't match (or the tool call was rejected), **stop and surface it to the user** — don't fall back to prefixing commands.
+   **Verify the switch:** `realpath "$(git rev-parse --show-toplevel)"` must equal `realpath "<root>/.worktrees/<branch>"` (canonicalize both — a symlinked path would otherwise mismatch) and `git branch --show-current` must print `<branch>`. If either doesn't match (or the tool call was rejected), **stop and surface it to the user** — don't fall back to prefixing commands.
 
    From here on every command runs bare: **never prefix commands with `cd .worktrees/<branch> &&` or `git -C …`** — prefixed commands are harder to read and break hooks that match on the command's prefix or cwd.
 
