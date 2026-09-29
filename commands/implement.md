@@ -49,7 +49,10 @@ This is the `/implement` recipe of the dossier-tradecraft framework — Phase 4,
    b. **`cleanup-artifacts`.** Invoke the skill to delete this branch's plan file.
    c. **`publish-pr`.** Invoke the skill with the branch, the sourced commit message, and the PR ref. It squashes (soft-reset + `git add -A` + recommit + `--force-with-lease`) and marks the PR ready.
 
-10. **Exit.** Surface: the PR ref (URL), a one-line summary of what shipped, and the status — **PR is ready for human review, not merged.** Merging stays a human action; `/implement` ends at "ready." Then return the session to the main checkout — the inverse of `repo-setup`'s enter step (`ExitWorktree(action: "keep")` in Claude Code; load via `ToolSearch` `select:ExitWorktree` if deferred) — leaving the worktree on disk; the next `repo-setup` prunes it once the PR merges. Follow-up work on the PR (human review comments) re-enters the worktree per `repo-setup`'s **Re-entering later** note — never by prefixing commands.
+10. **Exit.**
+   a. Surface: the PR ref (URL), a one-line summary of what shipped, and the status — **PR is ready for human review, not merged.** Merging stays a human action; `/implement` ends at "ready."
+   b. **Release the worktree lock** `repo-setup` took — from inside the worktree, if its entry in `git worktree list --porcelain` has a `locked` line, `git worktree unlock "$(git rev-parse --show-toplevel)"`. The branch has commits by now, so the prune won't mistake it for merged until the PR really merges.
+   c. Return the session to the main checkout — the inverse of `repo-setup`'s enter step (`ExitWorktree(action: "keep")` in Claude Code; load via `ToolSearch` `select:ExitWorktree` if deferred) — leaving the worktree on disk; the next `repo-setup` prunes it once the PR merges. Follow-up work on the PR (human review comments) re-enters the worktree per `repo-setup`'s **Re-entering later** note — never by prefixing commands.
 
 ## Cross-recipe principles
 
@@ -57,6 +60,7 @@ This is the `/implement` recipe of the dossier-tradecraft framework — Phase 4,
 
 - **Kickback to `/scope`** — if implementation surfaces a decision the scope doc never settled, surface: *"this surfaces a scope question — we should pause and kick back to `/scope` to settle it."* The scope doc owns the decision; don't quietly decide it here.
 - **Kickback to `/design`** — if implementation reveals a wrong design assumption, surface: *"this challenges a design assumption — we should kick back to `/design`."* User decides whether to context-switch.
+- **Pause or abandon before step 10.** A kickback or pause keeps the worktree lock — the branch may have no commits yet, and the lock is its only protection from a concurrent prune; resume via `repo-setup`'s **Re-entering later**. If the user explicitly abandons the branch, offer to remove it outright — a branch with unmerged commits is never pruned, so leaving it just strands it: `ExitWorktree(action: "keep")` → `git worktree unlock <path>` → `git worktree remove <path>` (`--force` only if the user confirms discarding uncommitted work) → `git branch -D <branch>`; if a draft PR exists, also offer to close it and delete the remote branch. Skip step 10 after this.
 - **No `/research` kickback** — research produces information, not owned decisions. Handle it inline via `dispatch-exploration` (vault or web target). Surface: *"we need to look up X — quick check inline (no `/research` kickback)."*
 - **Fresh session for post-merge follow-up.** Post-merge dogfooding or agent-definition changes need a fresh session to take effect — note this at exit when relevant.
 
