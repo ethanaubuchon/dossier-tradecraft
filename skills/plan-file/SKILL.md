@@ -28,9 +28,11 @@ If skipping, **state the reason in one sentence** before proceeding, so the skip
 
 `.claude/plans/<branch>.md` in the worktree root. **Flatten `/` in the branch name to `-`** so the plan is a single file, not a nested path: `feat/new-thing` → `.claude/plans/feat-new-thing.md`. This `/`→`-` rule is canonical here; `repo-setup`'s plan-file prune and `cleanup-artifacts`' deletion must use the same flattening.
 
-The plan is working scaffolding, not shipped documentation, so `.claude/plans/` **must be gitignored** — don't assume it. Ensure `.claude/plans/` is in the repo's `.gitignore` (add it if missing) before writing the plan. `repo-setup` seeds this alongside `.worktrees/`, but `plan-file` guarantees it too so the property holds even when invoked standalone.
+The plan is working scaffolding, not shipped documentation, so `.claude/plans/` **must be ignored by git** — don't assume it. Before writing the plan, from the worktree root, check `git check-ignore -q .claude/plans/<flattened-branch>.md` (exit 0 = ignored, 1 = not ignored; anything else is an error — stop and surface it). If it isn't ignored, add `.claude/plans/` to the repo-local exclude file rather than editing the tracked `.gitignore`, using `repo-setup` step 0's two-command snippet (canonical) with `.claude/plans/` as the only pattern, then re-run the check — if it still isn't ignored, a tracked `.gitignore` rule (e.g. `!.claude/plans/`) is overriding the exclude; stop and surface it. The exclude file is shared by every worktree and never shows up in a diff. A worktree-isolated session refuses writes into the main checkout's `.git`, so if the append is refused, stop and give the user the exact command to run themselves (e.g. via `! <command>`) — don't fall back to editing `.gitignore`.
 
-**Deleting the plan is `cleanup-artifacts`' job** (#35) at the draft→ready boundary, not this primitive's. Until `cleanup-artifacts` ships, the gitignore guarantee above is what keeps a plan from leaking into a PR.
+`repo-setup` seeds the same entry before entering the worktree, so in `/implement` the check normally passes; `plan-file` guarantees it too so the property holds even when invoked standalone. A `.gitignore` entry the project already tracks satisfies the check just as well. A project that tracks plan files overrides this (see Project overrides) — otherwise new plans are silently ignored.
+
+**Deleting the plan is `cleanup-artifacts`' job** (#35) at the draft→ready boundary, not this primitive's; the ignore guarantee above is what keeps a plan from leaking into a PR before then.
 
 ## Plan structure
 
@@ -69,7 +71,7 @@ Anything the story did not fully answer. Resolve with the user before coding, or
 2. If a plan file already exists for this branch, read it and offer to revise rather than overwrite.
 3. Scan the affected files briefly to ground the approach in real code (do not start modifying them).
 4. Draft the plan using the structure above.
-5. Ensure `.claude/plans/` is gitignored (add it if missing), then write the plan to `.claude/plans/<branch>.md` (flattened name).
+5. Ensure `.claude/plans/` is ignored (`git check-ignore`; add it to `info/exclude` if not), then write the plan to `.claude/plans/<branch>.md` (flattened name).
 6. Hand the plan off for approval per **Approval handoff** below, and wait for explicit approval.
 7. Iterate on feedback — update the plan file in place, then re-surface only what changed and what is still open (see **Approval handoff**).
 8. Only after approval does the recipe proceed to implementation — referencing the plan file on subsequent turns as the source of truth.
@@ -114,6 +116,7 @@ On a greenfield story, the affected-files list and approach often can't be fully
 ## Project overrides
 
 - **Plan-artifact location** — a repo that tracks plans elsewhere (e.g. `docs/plans/`) overrides the location; keep the flatten rule consistent with `repo-setup` and `cleanup-artifacts`.
+- **Tracked plans under `.claude/plans/`** — skip the exclude fallback here and `repo-setup` step 0's `.claude/plans/` entry, so new plans aren't silently ignored.
 - **Size-skip threshold** — a repo may tune what counts as "trivial."
 
 ## Future scope
